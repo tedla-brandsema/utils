@@ -49,12 +49,30 @@ func LevelString(level slog.Level) string {
 	return levelText[level]
 }
 
-// setAdditionalLogLevels modifies slog.HandlerOptions to support custom log level names.
-func setAdditionalLogLevels(opts *slog.HandlerOptions) {
-	opts.ReplaceAttr = ReplaceAttrLevel
+// SetAdditionalLogLevels modifies slog.HandlerOptions to support custom log level names.
+// It sets the current log level to slog.LevelInfo if non is set.
+func SetAdditionalLogLevels(opts *slog.HandlerOptions) *slog.HandlerOptions {
+	// To dynamically set the log level,
+	// opts.Level needs to be set to a slog.LevelVar
+	lvl := &slog.LevelVar{}
+
+	if opts == nil {
+		opts = &slog.HandlerOptions{
+			Level: lvl,
+		}
+	}
+
+	if opts.Level == nil {
+		lvl.Set(opts.Level.Level())
+		opts.Level = lvl
+	}
+
+	opts.ReplaceAttr = replaceAttrLevel
+
+	return opts
 }
 
-func ReplaceAttrLevel(_ []string, a slog.Attr) slog.Attr {
+func replaceAttrLevel(_ []string, a slog.Attr) slog.Attr {
 	if a.Key == slog.LevelKey {
 		level := a.Value.Any().(slog.Level)
 		a.Value = slog.StringValue(defaultLevelText[level])

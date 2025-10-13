@@ -7,20 +7,14 @@ import (
 )
 
 func Test_Set_Additional_Levels_JSONHandler(t *testing.T) {
-	lgr := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level:       lvl,
-		ReplaceAttr: ReplaceAttrLevel,
-	}))
+	lgr := slog.New(slog.NewJSONHandler(os.Stdout, SetAdditionalLogLevels(opts)))
 	slog.SetDefault(lgr)
 
 	printLevels(slog.Default(), t)
 }
 
 func Test_Set_Additional_Levels_TextHandler(t *testing.T) {
-	lgr := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		Level:       lvl,
-		ReplaceAttr: ReplaceAttrLevel,
-	}))
+	lgr := slog.New(slog.NewTextHandler(os.Stdout, SetAdditionalLogLevels(opts)))
 	slog.SetDefault(lgr)
 
 	printLevels(slog.Default(), t)
