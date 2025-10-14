@@ -7,7 +7,9 @@ import (
 
 // Custom log levels for additional verbosity control.
 const (
-	step = 4
+	// NOTE: do not set to slog.LevelWarn directly;
+	// always calc the delta
+	step = slog.LevelWarn - slog.LevelInfo
 
 	LevelTrace = slog.LevelDebug - step
 	LevelDebug = slog.LevelDebug
@@ -26,27 +28,46 @@ var defaultLevelText = map[slog.Level]string{
 	LevelFatal: "FATAL",
 }
 
+var defaultPaddedLevelText = map[slog.Level]string{
+	LevelTrace: padLevelText(LevelTrace),
+	LevelDebug: padLevelText(LevelDebug),
+	LevelInfo:  padLevelText(LevelInfo),
+	LevelWarn:  padLevelText(LevelWarn),
+	LevelError: padLevelText(LevelError),
+	LevelFatal: padLevelText(LevelFatal),
+}
+
 var defaultColoredLevelText = map[slog.Level]string{
-	LevelTrace: Blue(defaultPaddedLevelText(LevelTrace)),
-	LevelDebug: Green(defaultPaddedLevelText(LevelDebug)),
-	LevelInfo:  White(defaultPaddedLevelText(LevelInfo)),
-	LevelWarn:  Yellow(defaultPaddedLevelText(LevelWarn)),
-	LevelError: Red(defaultPaddedLevelText(LevelError)),
-	LevelFatal: Purple(defaultPaddedLevelText(LevelFatal)),
+	LevelTrace: Blue(defaultPaddedLevelText[LevelTrace]),
+	LevelDebug: Green(defaultPaddedLevelText[LevelDebug]),
+	LevelInfo:  White(defaultPaddedLevelText[LevelInfo]),
+	LevelWarn:  Yellow(defaultPaddedLevelText[LevelWarn]),
+	LevelError: Red(defaultPaddedLevelText[LevelError]),
+	LevelFatal: Purple(defaultPaddedLevelText[LevelFatal]),
 }
 
-func defaultPaddedLevelText(lvl slog.Level) string {
-	return fmt.Sprintf("%-5s", defaultLevelText[lvl])
+var paddingStr = fmt.Sprintf("%%-%ds", calcPadding())
+
+func padLevelText(lvl slog.Level) string {
+	return fmt.Sprintf(paddingStr, defaultLevelText[lvl])
 }
 
-var levelText map[slog.Level]string
-
-func init() {
-	levelText = defaultColoredLevelText
+func calcPadding() int {
+	width := 0
+	for _, v := range defaultLevelText {
+		if len(v) > width {
+			width = len(v)
+		}
+	}
+	return width
 }
 
 func LevelString(level slog.Level) string {
-	return levelText[level]
+	return defaultPaddedLevelText[level]
+}
+
+func ColoredLevelString(level slog.Level) string {
+	return defaultColoredLevelText[level]
 }
 
 // SetAdditionalLogLevels modifies slog.HandlerOptions to support custom log level names.
@@ -62,11 +83,11 @@ func SetAdditionalLogLevels(opts *slog.HandlerOptions) *slog.HandlerOptions {
 		}
 	}
 
-	if opts.Level == nil {
+	if opts.Level != nil {
 		lvl.Set(opts.Level.Level())
-		opts.Level = lvl
 	}
 
+	opts.Level = lvl
 	opts.ReplaceAttr = replaceAttrLevel
 
 	return opts

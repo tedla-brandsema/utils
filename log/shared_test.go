@@ -10,17 +10,17 @@ import (
 
 var (
 	out  io.Writer
-	opts *slog.HandlerOptions
+	lvl  *slog.LevelVar
+	opts *DevHandlerOptions
 	ctx  = context.Background()
-	lvl  = &slog.LevelVar{} // Default is slog.LevelInfo (i.e. 0)
 )
 
 func init() {
 	out = os.Stdout
-	opts = &slog.HandlerOptions{
-		AddSource: true,
-		Level:     lvl,
-	}
+	opts = NewDevHandlerOptions()
+	opts.Color = true
+	opts.AddSource = true
+	lvl = opts.Level.(*slog.LevelVar) // Default is slog.LevelInfo (i.e. 0)
 }
 
 var levels = []slog.Level{

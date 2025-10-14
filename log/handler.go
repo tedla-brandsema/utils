@@ -26,11 +26,35 @@ func (cw *colorWriter) Write(p []byte) (int, error) {
 	return n1 + n2, err
 }
 
+type SourceFormat int
+
+const (
+	SrcAbs SourceFormat = iota
+	SrcRel
+)
+
+type DevHandlerOptions struct {
+	*slog.HandlerOptions
+	SourcePath SourceFormat
+	Color      bool
+}
+
+func NewDevHandlerOptions() *DevHandlerOptions {
+	return &DevHandlerOptions{
+		HandlerOptions: &slog.HandlerOptions{
+			Level:     &slog.LevelVar{},
+			AddSource: false,
+		},
+		Color:      false,
+		SourcePath: SrcAbs,
+	}
+}
+
 // DevHandler formats log records with color-coded levels for cli output,
 // using the provided io.Writer.
 type DevHandler struct {
 	base slog.Handler
-	opts *slog.HandlerOptions
+	opts *DevHandlerOptions
 	cw   *colorWriter
 }
 
@@ -59,9 +83,12 @@ const format = "[15:05:05]"
 // Handle formats and prints a log record at the appropriate log level.
 func (h *DevHandler) Handle(_ context.Context, r slog.Record) error {
 	level := LevelString(r.Level)
-
+	msg := r.Message
+	if h.opts.Color {
+		level = ColoredLevelString(r.Level)
+		msg = Cyan(r.Message)
+	}
 	timeStr := r.Time.Format(format)
-	msg := Cyan(r.Message)
 
 	h.cw.prefix = fmt.Sprintf("%s %s %s\n", timeStr, level, msg)
 
@@ -78,7 +105,9 @@ func (h *DevHandler) Handle(_ context.Context, r slog.Record) error {
 
 	if h.opts.AddSource {
 		path := r.Source().File
-		path = shortenPath(path)
+		if h.opts.SourcePath == SrcRel {
+			path = relativePath(path)
+		}
 		_, _ = fmt.Fprintf(tw, keyFormat+"\t%s:%d\n", "source", path, r.Source().Line)
 	}
 	_ = tw.Flush()
@@ -117,7 +146,7 @@ func putWriterPair(buf *bytes.Buffer, tw *tabwriter.Writer) {
 	bufPool.Put(buf)
 }
 
-func shortenPath(path string) string {
+func relativePath(path string) string {
 	if cwd, err := os.Getwd(); err == nil {
 		if rel, err := filepath.Rel(cwd, path); err == nil {
 			return rel
@@ -127,9 +156,9 @@ func shortenPath(path string) string {
 }
 
 // NewDevHandler initializes a DevHandler with optional HandlerOptions.
-func NewDevHandler(out io.Writer, opts *slog.HandlerOptions) *DevHandler {
+func NewDevHandler(out io.Writer, opts *DevHandlerOptions) *DevHandler {
 	if opts == nil {
-		opts = &slog.HandlerOptions{}
+		opts = NewDevHandlerOptions()
 	}
 
 	cw := &colorWriter{
@@ -137,7 +166,7 @@ func NewDevHandler(out io.Writer, opts *slog.HandlerOptions) *DevHandler {
 	}
 
 	return &DevHandler{
-		base: slog.NewTextHandler(cw, opts),
+		base: slog.NewTextHandler(cw, opts.HandlerOptions),
 		opts: opts,
 		cw:   cw,
 	}

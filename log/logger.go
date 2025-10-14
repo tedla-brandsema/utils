@@ -8,17 +8,14 @@ import (
 )
 
 // New initializes a new slog.Logger
-func New(out io.Writer, opts *slog.HandlerOptions) *Logger {
+func New(out io.Writer, opts *DevHandlerOptions) *Logger {
 	return &Logger{
 		Logger: slog.New(NewDevHandler(out, opts)),
 	}
 }
 
 func NewDefault() *Logger {
-	return New(os.Stdout, &slog.HandlerOptions{
-		AddSource: true,
-		Level:     LevelInfo,
-	})
+	return New(os.Stdout, NewDevHandlerOptions())
 }
 
 // Logger extends slog.Logger with additional log levels, Trace and Fatal.
