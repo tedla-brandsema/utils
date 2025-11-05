@@ -11,12 +11,15 @@ const ( //var clrStr = "\033[%d;%dm%s\033[0m"
 	argsStr  = "%s"
 )
 
-type Format int
+type Style int
 
 const (
-	FormatRegular   Format = 0
-	FormatBold      Format = 1
-	FormatUnderline Format = 4
+	StyleRegular   Style = 0
+	StyleBold      Style = 1
+	StyleFaint     Style = 2
+	StyleItalic    Style = 3
+	StyleUnderline Style = 4
+	StyleStrike    Style = 9
 )
 
 type Color int
@@ -47,12 +50,12 @@ const (
 	IntenseColorWhite
 )
 
-func styleStr(format Format, clr Color) string {
+func styleStr(format Style, clr Color) string {
 	return fmt.Sprintf(clrStr, format, clr)
 }
 
-func Style(format Format, color Color) func(...any) string {
-	s := fmt.Sprint(styleStr(format, color), argsStr, resetStr)
+func Format(style Style, color Color) func(...any) string {
+	s := fmt.Sprint(styleStr(style, color), argsStr, resetStr)
 	sprint := func(args ...any) string {
 		return fmt.Sprintf(s, fmt.Sprint(args...))
 	}
@@ -60,11 +63,11 @@ func Style(format Format, color Color) func(...any) string {
 }
 
 var (
-	Red    = Style(FormatBold, IntenseColorRed)
-	Green  = Style(FormatBold, IntenseColorGreen)
-	Yellow = Style(FormatBold, IntenseColorYellow)
-	Blue   = Style(FormatBold, IntenseColorBlue)
-	Purple = Style(FormatBold, IntenseColorPurple)
-	Cyan   = Style(FormatBold, IntenseColorCyan)
-	White  = Style(FormatBold, IntenseColorWhite)
+	Red    = Format(StyleBold, IntenseColorRed)
+	Green  = Format(StyleBold, IntenseColorGreen)
+	Yellow = Format(StyleBold, IntenseColorYellow)
+	Blue   = Format(StyleBold, IntenseColorBlue)
+	Purple = Format(StyleBold, IntenseColorPurple)
+	Cyan   = Format(StyleBold, IntenseColorCyan)
+	White  = Format(StyleBold, IntenseColorWhite)
 )
