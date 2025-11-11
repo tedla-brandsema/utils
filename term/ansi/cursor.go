@@ -115,9 +115,6 @@ func (w *Writer) ClearLineRight()   { fmt.Fprint(w.w, "\x1b[K") }
 func (w *Writer) ClearScreen()      { fmt.Fprint(w.w, "\x1b[2J") }
 func (w *Writer) ClearScreenBelow() { fmt.Fprint(w.w, "\x1b[J") }
 
-func (w *Writer) EnableBlinkingCursor()  { fmt.Fprint(w.w, "\x1b[?12h") }
-func (w *Writer) DisableBlinkingCursor() { fmt.Fprint(w.w, "\x1b[?12l") }
-
 func (w *Writer) HideCursor()    { fmt.Fprint(w.w, "\x1b[?25l") }
 func (w *Writer) ShowCursor()    { fmt.Fprint(w.w, "\x1b[?25h") }
 func (w *Writer) SaveCursor()    { fmt.Fprint(w.w, "\x1b[s") }
@@ -125,3 +122,9 @@ func (w *Writer) RestoreCursor() { fmt.Fprint(w.w, "\x1b[u") }
 
 // Newline prints a newline and moves the cursor to column 0.
 func (w *Writer) Newline() { fmt.Fprint(w.w, "\n\x1b[G") }
+
+// Works reliably in xterm, iTerm2, and most Linux TTYs.
+// Does not work in Windows Terminal or cmd.exe 
+// It’s safe to call even if unsupported; it’ll just be ignored.
+func (w *Writer) EnableBlinkingCursor()  { fmt.Fprint(w.w, "\x1b[?12h") }
+func (w *Writer) DisableBlinkingCursor() { fmt.Fprint(w.w, "\x1b[?12l") }
