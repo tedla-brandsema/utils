@@ -19,9 +19,8 @@ type Writer struct {
 	oldState *term.State
 }
 
-
-func NewOutWriter() (*Writer, error) {	return NewWriter(os.Stdout) }
-func NewErrWriter() (*Writer, error) {	return NewWriter(os.Stderr) }
+func NewOutWriter() (*Writer, error) { return NewWriter(os.Stdout) }
+func NewErrWriter() (*Writer, error) { return NewWriter(os.Stderr) }
 
 // NewWriter wraps the given io.Writer.
 // It enables newline reset and raw mode if writing to a TTY.
@@ -110,20 +109,19 @@ func (w *Writer) MoveLeft()  { w.MoveLeftCols(1) }
 func (w *Writer) CursorHome()            { fmt.Fprint(w.w, "\x1b[G") }
 func (w *Writer) CursorPos(row, col int) { fmt.Fprintf(w.w, "\x1b[%d;%dH", row, col) }
 
+func (w *Writer) ResetLine()        { fmt.Fprint(w.w, "\r\x1b[2K") }
 func (w *Writer) ClearLine()        { fmt.Fprint(w.w, "\x1b[2K") }
 func (w *Writer) ClearLineRight()   { fmt.Fprint(w.w, "\x1b[K") }
 func (w *Writer) ClearScreen()      { fmt.Fprint(w.w, "\x1b[2J") }
 func (w *Writer) ClearScreenBelow() { fmt.Fprint(w.w, "\x1b[J") }
 
+func (w *Writer) EnableBlinkingCursor()  { fmt.Fprint(w.w, "\x1b[?12h") }
+func (w *Writer) DisableBlinkingCursor() { fmt.Fprint(w.w, "\x1b[?12l") }
+
 func (w *Writer) HideCursor()    { fmt.Fprint(w.w, "\x1b[?25l") }
 func (w *Writer) ShowCursor()    { fmt.Fprint(w.w, "\x1b[?25h") }
 func (w *Writer) SaveCursor()    { fmt.Fprint(w.w, "\x1b[s") }
 func (w *Writer) RestoreCursor() { fmt.Fprint(w.w, "\x1b[u") }
-
-func (w *Writer) ResetLine() {
-	w.MoveUp()
-	w.ClearLine()
-}
 
 // Newline prints a newline and moves the cursor to column 0.
 func (w *Writer) Newline() { fmt.Fprint(w.w, "\n\x1b[G") }
