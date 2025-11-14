@@ -2,21 +2,17 @@ package log
 
 import (
 	"context"
-	"io"
 	"log/slog"
-	"os"
 	"testing"
 )
 
 var (
-	out  io.Writer
 	lvl  *slog.LevelVar
 	opts *DevHandlerOptions
 	ctx  = context.Background()
 )
 
 func init() {
-	out = os.Stdout
 	opts = NewDevHandlerOptions()
 	opts.Color = true
 	opts.AddSource = true
@@ -32,11 +28,11 @@ var levels = []slog.Level{
 	LevelFatal,
 }
 
-func printLevels(lgr *slog.Logger, t *testing.T) {
+func PrintLevels(lgr *slog.Logger, t *testing.T) {
 	for _, level := range levels {
 		lvl.Set(level)
 
-		t.Logf("setting log level to: %s", defaultLevelText[level])
+		t.Logf("setting log level to: %s", LevelString(level))
 
 		lgr.Log(
 			ctx,

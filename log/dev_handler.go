@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"text/tabwriter"
+
+	"github.com/tedla-brandsema/utils/generics"
 )
 
 type colorWriter struct {
@@ -56,6 +58,23 @@ type DevHandler struct {
 	base slog.Handler
 	opts *DevHandlerOptions
 	cw   *colorWriter
+}
+
+// NewDevHandler initializes a DevHandler with optional HandlerOptions.
+func NewDevHandler(out io.Writer, opts *DevHandlerOptions) *DevHandler {
+	if opts == nil {
+		opts = NewDevHandlerOptions()
+	}
+
+	cw := &colorWriter{
+		out: out,
+	}
+
+	return &DevHandler{
+		base: slog.NewTextHandler(cw, opts.HandlerOptions),
+		opts: opts,
+		cw:   cw,
+	}
 }
 
 func (h *DevHandler) Enabled(ctx context.Context, level slog.Level) bool {
@@ -120,11 +139,11 @@ func (h *DevHandler) Handle(_ context.Context, r slog.Record) error {
 }
 
 var (
-	bufPool = Instance(func() *bytes.Buffer {
+	bufPool = generics.PoolInstance(func() *bytes.Buffer {
 		return new(bytes.Buffer)
 	})
 
-	tabWriterPool = Instance(func() *tabwriter.Writer {
+	tabWriterPool = generics.PoolInstance(func() *tabwriter.Writer {
 		return tabwriter.NewWriter(io.Discard, 0, 0, 1, ' ', 0)
 	})
 )
@@ -153,21 +172,4 @@ func relativePath(path string) string {
 		}
 	}
 	return path
-}
-
-// NewDevHandler initializes a DevHandler with optional HandlerOptions.
-func NewDevHandler(out io.Writer, opts *DevHandlerOptions) *DevHandler {
-	if opts == nil {
-		opts = NewDevHandlerOptions()
-	}
-
-	cw := &colorWriter{
-		out: out,
-	}
-
-	return &DevHandler{
-		base: slog.NewTextHandler(cw, opts.HandlerOptions),
-		opts: opts,
-		cw:   cw,
-	}
 }

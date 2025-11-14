@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Log Packages</title>
+    <style>
+        table {
+            border-collapse: collapse;
+        }
+
+        td,
+        th {
+            border: 1px solid #ccc;
+            padding: 6px 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Registered Packages</h1>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Package</th>
+                <th>Level</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{ range .Packages }}
+            <tr>
+                <td>{{ .Name }}</td>
+                <td>{{ .Level }}</td>
+                <td><a href="/logdev/update?pkg={{ .Name }}">change</a></td>
+            </tr>
+            {{ end }}
+        </tbody>
+    </table>
+
+</body>
+
+</html>

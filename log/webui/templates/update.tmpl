@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Update Log Level</title>
+</head>
+
+<body>
+
+    <h1>Update: {{ .Pkg }}</h1>
+
+    <form method="post" action="/logdev/update">
+        <input type="hidden" name="pkg" value="{{ .Pkg }}">
+
+        <select name="level">
+            <option value="DEBUG">DEBUG</option>
+            <option value="INFO">INFO</option>
+            <option value="WARN">WARN</option>
+            <option value="ERROR">ERROR</option>
+        </select>
+
+        <label>
+            <input type="checkbox" name="cascade" value="1">
+            Cascade to subpackages
+        </label>
+
+        <button type="submit">Apply</button>
+    </form>
+
+</body>
+
+</html>
