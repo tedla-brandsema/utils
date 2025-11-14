@@ -11,8 +11,8 @@ type Registry[K comparable, V any] struct {
 	data map[K]V
 }
 
-// New creates a new Registry.
-func New[K comparable, V any]() *Registry[K, V] {
+// NewRegistry creates a new Registry.
+func NewRegistry[K comparable, V any]() *Registry[K, V] {
 	return &Registry[K, V]{
 		data: make(map[K]V),
 	}
