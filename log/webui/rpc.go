@@ -11,6 +11,10 @@ import (
 	"github.com/tedla-brandsema/utils/log/logger"
 )
 
+
+
+
+
 var levels []byte
 
 func loadLevels() {
@@ -88,3 +92,12 @@ func updatePostHandler(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, basePath, http.StatusSeeOther)
 }
+
+
+// func globalThresholdHandler(w http.ResponseWriter, r *http.Request) {
+
+// }
+
+// func updateGlobalThresholdHandler(w http.ResponseWriter, r *http.Request) {
+
+// }

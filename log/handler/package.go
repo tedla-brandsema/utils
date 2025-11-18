@@ -12,18 +12,29 @@ import (
 
 type PkgAwareHandler struct {
     fallback slog.Handler
-    minLevel slog.Level
+    globalThreshold *slog.LevelVar
 }
 
-func NewPkgAwareHandler(fallback slog.Handler, min slog.Level) *PkgAwareHandler {
+func NewPkgAwareHandler(fallback slog.Handler, threshold slog.Level) *PkgAwareHandler {
+	lvlv:= &slog.LevelVar{}
+	lvlv.Set(threshold)
+    
     return &PkgAwareHandler{
         fallback: fallback,
-        minLevel: min,
+        globalThreshold: lvlv,
     }
 }
 
+func (h *PkgAwareHandler) SetThreshold(lvl slog.Level) {
+	h.globalThreshold.Set(lvl)
+}
+
+func (h *PkgAwareHandler) GetThreshold() slog.Level {
+	return h.globalThreshold.Level()
+}
+
 func (h *PkgAwareHandler) Enabled(ctx context.Context, lvl slog.Level) bool {
-	return lvl >= h.minLevel
+	return lvl >= h.globalThreshold.Level()
 }
 
 func (h *PkgAwareHandler) Handle(ctx context.Context, r slog.Record) error {
@@ -34,20 +45,14 @@ func (h *PkgAwareHandler) Handle(ctx context.Context, r slog.Record) error {
         pc = pcs[0]
     }
 
-
-    pkg := packageFromPC(pc)
-    if lvlv, ok := log.Routes.Get(pkg); ok {
-        // Only emit if record level >= pkg-level
-        if r.Level >= lvlv.Level() {
+    if lv, ok := pcLevelCache.Load(pc); ok {
+		if r.Level >= lv.(*slog.LevelVar).Level() {
             return h.fallback.Handle(ctx, r)
         }
-        return nil
-    }
+	}
 
-	// Auto-register new package with default level
-	lvlv := &slog.LevelVar{}
-	lvlv.Set(h.minLevel)
-	log.Routes.Set(pkg, lvlv)
+    lv := resolveLevelVarForPC(pc, h.globalThreshold)
+	pcLevelCache.Store(pc, lv)
 
     return h.fallback.Handle(ctx, r)
 }
@@ -55,15 +60,34 @@ func (h *PkgAwareHandler) Handle(ctx context.Context, r slog.Record) error {
 func (h *PkgAwareHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	return &PkgAwareHandler{
 		fallback: h.fallback.WithAttrs(attrs),
-		minLevel: h.minLevel,
+		globalThreshold: h.globalThreshold,
 	}
 }
 
 func (h *PkgAwareHandler) WithGroup(name string) slog.Handler {
 	return &PkgAwareHandler{
 		fallback: h.fallback.WithGroup(name),
-		minLevel: h.minLevel,
+		globalThreshold: h.globalThreshold,
 	}
+}
+
+var pcLevelCache sync.Map // pc uintptr → *slog.LevelVar
+
+func resolveLevelVarForPC(pc uintptr, global *slog.LevelVar) *slog.LevelVar {
+	// Find package (slow)
+	pkg := packageFromPC(pc)
+
+	// Already registered in Routes?
+	if lv, ok := log.Routes.Get(pkg); ok {
+		return lv
+	}
+
+	// Auto-register
+	lv := &slog.LevelVar{}
+	lv.Set(global.Level())
+	log.Routes.Set(pkg, lv)
+
+	return lv
 }
 
 var pcCache sync.Map // pc → pkg string
@@ -87,14 +111,23 @@ func packageFromPC(pc uintptr) string {
 }
 
 func extractPkg(full string) string {
-	// fast manual scan instead of strings functions
-	last := strings.LastIndexByte(full, '/')
-	if last == -1 {
-		last = 0
-	}
-	dot := strings.IndexByte(full[last:], '.')
-	if dot == -1 {
-		return full
-	}
-	return full[:last+dot]
+    // fast path: no slash → find first dot
+    lastSlash := strings.LastIndexByte(full, '/')
+    if lastSlash == -1 {
+        if dot := strings.IndexByte(full, '.'); dot != -1 {
+            return full[:dot]
+        }
+        return full
+    }
+
+    // after final slash, drop function name and method signature
+    remainder := full[lastSlash+1:]
+
+    // find first dot AFTER the slash
+    dot := strings.IndexByte(remainder, '.')
+    if dot != -1 {
+        return full[:lastSlash+1+dot]
+    }
+
+    return full[:lastSlash]
 }
