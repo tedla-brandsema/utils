@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Log Levels</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 22px;
+        }
+
+        .card {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background: #e6e6e6;
+        }
+
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+
+        select, button, input[type="text"] {
+            padding: 6px 10px;
+            font-size: 14px;
+        }
+
+        button {
+            cursor: pointer;
+            border: none;
+            background: #0077cc;
+            color: white;
+            border-radius: 4px;
+        }
+
+        button:hover {
+            background: #005fa3;
+        }
+
+        .filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .filters > * {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Package Log Levels</h1>
+
+<div class="card">
+
+    <!-- Filters -->
+    <div class="filters">
+        <input id="searchBox" type="text" placeholder="Search package…" />
+        <select id="levelFilter">
+            <option value="">All Levels</option>
+        </select>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Package</th>
+                <th>Level</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="pkgTableBody"></tbody>
+    </table>
+</div>
+
+<script>
+    let levels = {};
+    let packages = [];
+
+    async function loadLevels() {
+        const res = await fetch("/log/level/all");
+        return await res.json();
+    }
+
+    async function loadPackages() {
+        const res = await fetch("/log/level/package/all");
+        return await res.json();
+    }
+
+    function render() {
+        const tbody = document.getElementById("pkgTableBody");
+        tbody.innerHTML = "";
+
+        const search = document.getElementById("searchBox").value.toLowerCase();
+        const lf = document.getElementById("levelFilter").value;
+
+        const filtered = packages.filter(p => {
+            const nameMatch = p.name.toLowerCase().includes(search);
+            const levelMatch = lf === "" || (lf == p.level);
+            return nameMatch && levelMatch;
+        });
+
+        filtered.forEach(pkg => {
+            const tr = document.createElement("tr");
+
+            const tdName = document.createElement("td");
+            tdName.textContent = pkg.name;
+
+            const tdLevel = document.createElement("td");
+            const select = document.createElement("select");
+
+            for (const lvl in levels) {
+                const opt = document.createElement("option");
+                opt.value = lvl;
+                opt.textContent = levels[lvl];
+                if (parseInt(lvl) === pkg.level) opt.selected = true;
+                select.appendChild(opt);
+            }
+
+            tdLevel.appendChild(select);
+
+            const tdAction = document.createElement("td");
+            const button = document.createElement("button");
+            button.textContent = "Save";
+
+            button.onclick = async () => {
+                const params = new URLSearchParams();
+                params.append("pkg", pkg.name);
+                params.append("level", select.value);
+
+                await fetch("/log/level/package/update", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: params.toString()
+                });
+
+                await refresh();
+            };
+
+            tdAction.appendChild(button);
+
+            tr.appendChild(tdName);
+            tr.appendChild(tdLevel);
+            tr.appendChild(tdAction);
+
+            tbody.appendChild(tr);
+        });
+    }
+
+    async function refresh() {
+        levels = await loadLevels();
+        packages = await loadPackages();
+
+        const lf = document.getElementById("levelFilter");
+        lf.innerHTML = `<option value="">All Levels</option>`;
+        for (const lvl in levels) {
+            const opt = document.createElement("option");
+            opt.value = lvl;
+            opt.textContent = levels[lvl];
+            lf.appendChild(opt);
+        }
+
+        render();
+    }
+
+    document.getElementById("searchBox").addEventListener("input", render);
+    document.getElementById("levelFilter").addEventListener("change", render);
+
+    refresh();
+</script>
+
+</body>
+</html>

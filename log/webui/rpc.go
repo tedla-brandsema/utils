@@ -90,7 +90,7 @@ func updatePostHandler(w http.ResponseWriter, r *http.Request) {
 	log.SetPackageLevel(pkg, lvl)
 	// }
 
-	http.Redirect(w, r, basePath, http.StatusSeeOther)
+	// http.Redirect(w, r, basePath, http.StatusSeeOther)
 }
 
 

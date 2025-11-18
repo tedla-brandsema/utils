@@ -1,157 +1,441 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-    <meta charset="UTF-8">
+    <meta charset="utf-8" />
     <title>Log Levels</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
     <style>
+        /* overall layout */
         body {
             margin: 0;
             padding: 20px;
-            font-family: sans-serif;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
             background: #f5f5f5;
-            color: #333;
+            color: #222;
         }
 
         h1 {
             text-align: center;
-            margin-bottom: 20px;
-            font-size: 22px;
+            margin-bottom: 12px;
+            font-size: 20px;
+            font-weight: 600;
         }
 
+        /* top apply/revert buttons */
+        .top-actions {
+            max-width: 800px;
+            margin: 0 auto 12px auto;
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .top-actions button {
+            padding: 6px 12px;
+            font-size: 14px;
+            border-radius: 0;
+            /* square buttons */
+            border: 1px solid #bbb;
+            /* subtle border */
+            background: #e0e0e0;
+            color: #222;
+            cursor: pointer;
+        }
+
+        .top-actions button.btn-secondary {
+            background: #d5d5d5;
+        }
+
+        .top-actions button:disabled {
+            opacity: 0.5;
+            cursor: default;
+        }
+
+        /* card */
         .card {
             max-width: 800px;
             margin: 0 auto;
             background: white;
             border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+            /* keep card rounded */
+            padding: 14px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.08);
         }
 
+        /* filters */
+        .filters {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filters .label {
+            font-weight: 600;
+            margin-right: 6px;
+            color: #444;
+        }
+
+        input[type="text"],
+        select {
+            padding: 6px 8px;
+            font-size: 14px;
+            border-radius: 0;
+            /* square */
+            border: 1px solid #ccc;
+            /* subtle */
+            background: #fff;
+        }
+
+        input[type="text"] {
+            flex: 1 1 300px;
+            /* allow search box to expand */
+            min-width: 200px;
+        }
+
+        select {
+            width: 160px;
+            /* keep level dropdown narrow */
+        }
+
+        /* table */
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
-        }
-
-        th, td {
-            padding: 10px;
-            text-align: left;
-        }
-
-        th {
-            background: #e6e6e6;
-        }
-
-        tr:nth-child(even) {
-            background: #f9f9f9;
-        }
-
-        select, button {
-            padding: 6px 10px;
+            margin-top: 4px;
             font-size: 14px;
         }
 
+        th,
+        td {
+            padding: 8px 6px;
+            text-align: left;
+        }
+
+        thead th {
+            background: #f0f0f0;
+            user-select: none;
+        }
+
+        tbody tr:nth-child(even) {
+            background: #fafafa;
+        }
+
+        .pending {
+            background: #fcf8e3 !important;
+        }
+
+        th .col {
+            display: inline-flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .sort-indicator {
+            font-size: 12px;
+            color: #666;
+            width: 12px;
+            height: 12px;
+            line-height: 12px;
+        }
+
+        /* buttons inside table (if any) */
         button {
-            cursor: pointer;
-            border: none;
-            background: #0077cc;
-            color: white;
-            border-radius: 4px;
+            border-radius: 0;
+            /* square */
+            border: 1px solid #bbb;
+            /* subtle */
+            padding: 4px 8px;
+            background: #e0e0e0;
+            color: #222;
         }
 
         button:hover {
-            background: #005fa3;
+            background: #d5d5d5;
+        }
+
+        /* responsive tweaks */
+        @media (max-width: 640px) {
+            .filters {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .top-actions {
+                justify-content: center;
+            }
+
+            input[type="text"],
+            select {
+                width: 100%;
+            }
+        }
+
+        /* adjust column widths */
+        th:nth-child(1),
+        td:nth-child(1) {
+            width: 70%;
+            /* package column gets most space */
+        }
+
+        th:nth-child(2),
+        td:nth-child(2) {
+            width: 30%;
+            /* level dropdown narrower */
         }
     </style>
 </head>
-<body>
 
+<body>
     <h1>Package Log Levels</h1>
 
+    <!-- Apply/Revert above the card -->
+    <div class="top-actions">
+        <button id="revertBtn" class="btn-secondary" disabled>Revert Changes</button>
+        <button id="applyBtn" disabled>Apply Changes</button>
+    </div>
+
     <div class="card">
+        <!-- Filters inside the card -->
+        <div class="filters" role="region" aria-label="Filters">
+            <div class="label">Filter:</div>
+            <input id="nameFilter" type="text" placeholder="fuzzy package search…" aria-label="Search package" />
+            <select id="levelFilter" aria-label="Filter by level">
+                <!-- populated dynamically -->
+            </select>
+        </div>
+
         <table>
             <thead>
                 <tr>
-                    <th>Package</th>
-                    <th>Level</th>
-                    <th></th>
+                    <th onclick="toggleSort('name')" aria-sort="none">
+                        <span class="col">Package <span id="ind-name" class="sort-indicator"></span></span>
+                    </th>
+                    <th onclick="toggleSort('level')" aria-sort="none">
+                        <span class="col">Level <span id="ind-level" class="sort-indicator"></span></span>
+                    </th>
                 </tr>
             </thead>
             <tbody id="pkgTableBody">
-                <!-- Filled by JS -->
+                <!-- rows -->
             </tbody>
         </table>
     </div>
 
     <script>
+        // Data containers
+        let levels = {};         // map value->label, e.g. { "4": "Info" }
+        let packages = [];       // array of { name, level, idx }
+        let originalMap = {};    // name -> original level
+        let pending = {};        // name -> new level
+
+        // sorting state (stable: use idx as tiebreak)
+        let sortField = "name"; // 'name' or 'level'
+        let sortAsc = true;
+
+        // Utility: fuzzy subsequence match (simple, fast)
+        // returns true if `q` chars appear in order inside `s`.
+        function fuzzyMatch(q, s) {
+            if (!q) return true;
+            q = q.toLowerCase();
+            s = s.toLowerCase();
+            let qi = 0;
+            for (let i = 0; i < s.length && qi < q.length; i++) {
+                if (s[i] === q[qi]) qi++;
+            }
+            return qi === q.length;
+        }
+
+        // Load levels from server
         async function loadLevels() {
             const res = await fetch("/log/level/all");
-            return await res.json();
+            if (!res.ok) throw new Error("failed to load levels");
+            levels = await res.json();
         }
 
+        // Load packages
         async function loadPackages() {
             const res = await fetch("/log/level/package/all");
-            return await res.json();
+            if (!res.ok) throw new Error("failed to load packages");
+            const data = await res.json();
+            // attach stable index for stable sort
+            packages = data.map((p, i) => ({ name: p.name, level: p.level, idx: i }));
+            originalMap = {};
+            packages.forEach(p => { originalMap[p.name] = p.level; });
         }
 
-        async function render() {
-            const levels = await loadLevels();
-            const pkgs = await loadPackages();
+        // Populate the level filter dynamically from `levels`
+        function populateLevelFilter() {
+            const sel = document.getElementById("levelFilter");
+            sel.innerHTML = "";
+            const optAll = document.createElement("option");
+            optAll.value = "";
+            optAll.textContent = "All levels";
+            sel.appendChild(optAll);
 
+            // preserve server order for levels iteration if any
+            for (const v in levels) {
+                const o = document.createElement("option");
+                o.value = v;
+                o.textContent = levels[v];
+                sel.appendChild(o);
+            }
+        }
+
+        // Sorting toggles
+        function toggleSort(field) {
+            if (sortField === field) {
+                sortAsc = !sortAsc;
+            } else {
+                sortField = field;
+                sortAsc = true;
+            }
+            render();
+            updateSortIndicators();
+        }
+
+        function updateSortIndicators() {
+            document.getElementById("ind-name").textContent = "";
+            document.getElementById("ind-level").textContent = "";
+            const ind = sortField === "name" ? "ind-name" : "ind-level";
+            document.getElementById(ind).textContent = sortAsc ? "▲" : "▼";
+        }
+
+        function hasPending() {
+            return Object.keys(pending).length > 0;
+        }
+
+        function updateButtons() {
+            const apply = document.getElementById("applyBtn");
+            const rev = document.getElementById("revertBtn");
+            const enabled = hasPending();
+            apply.disabled = !enabled;
+            rev.disabled = !enabled;
+        }
+
+        // Filter + render pipeline
+        function passesFilters(pkg) {
+            const nameQ = (document.getElementById("nameFilter")?.value || "").trim();
+            const lvlFilter = (document.getElementById("levelFilter")?.value || "");
+            // fuzzy match on package name
+            if (nameQ && !fuzzyMatch(nameQ, pkg.name)) return false;
+            // level filter: we compare displayed effective level (pending override or pkg.level)
+            const effective = (pending[pkg.name] !== undefined) ? pending[pkg.name] : pkg.level;
+            if (lvlFilter !== "" && String(effective) !== String(lvlFilter)) return false;
+            return true;
+        }
+
+        function render() {
             const tbody = document.getElementById("pkgTableBody");
             tbody.innerHTML = "";
 
-            pkgs.forEach(pkg => {
+            // Filter
+            let rows = packages.filter(p => passesFilters(p));
+
+            // Stable sort: primary = sortField, secondary = idx
+            rows.sort((a, b) => {
+                const aKey = (sortField === "name") ? a.name.toLowerCase() : a.level;
+                const bKey = (sortField === "name") ? b.name.toLowerCase() : b.level;
+
+                if (aKey < bKey) return sortAsc ? -1 : 1;
+                if (aKey > bKey) return sortAsc ? 1 : -1;
+                // stable tiebreak
+                return a.idx - b.idx;
+            });
+
+            for (const pkg of rows) {
                 const tr = document.createElement("tr");
 
-                // Package name
+                const effective = (pending[pkg.name] !== undefined) ? pending[pkg.name] : pkg.level;
+                const isPending = (pending[pkg.name] !== undefined && pending[pkg.name] !== originalMap[pkg.name]);
+
+                if (isPending) tr.classList.add("pending");
+
+                // Package cell
                 const tdName = document.createElement("td");
                 tdName.textContent = pkg.name;
-
-                // Level dropdown
-                const tdLevel = document.createElement("td");
-                const select = document.createElement("select");
-
-                for (const lvl in levels) {
-                    const opt = document.createElement("option");
-                    opt.value = lvl;
-                    opt.textContent = levels[lvl];
-                    if (parseInt(lvl) === pkg.level) opt.selected = true;
-                    select.appendChild(opt);
-                }
-                tdLevel.appendChild(select);
-
-                // Save button
-                const tdAction = document.createElement("td");
-                const button = document.createElement("button");
-                button.textContent = "Save";
-
-                button.onclick = async () => {
-                    const params = new URLSearchParams();
-                    params.append("pkg", pkg.name);
-                    params.append("level", select.value);
-
-                    await fetch("/log/level/package/update", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                        body: params.toString()
-                    });
-
-                    await render();
-                };
-
-                tdAction.appendChild(button);
-
                 tr.appendChild(tdName);
+
+                // Level cell (select)
+                const tdLevel = document.createElement("td");
+                const sel = document.createElement("select");
+                for (const v in levels) {
+                    const opt = document.createElement("option");
+                    opt.value = v;
+                    opt.textContent = levels[v];
+                    sel.appendChild(opt);
+                }
+                sel.value = String(effective);
+                sel.onchange = () => {
+                    const newVal = parseInt(sel.value, 10);
+                    if (newVal === originalMap[pkg.name]) {
+                        delete pending[pkg.name];
+                    } else {
+                        pending[pkg.name] = newVal;
+                    }
+                    updateButtons();
+                    render(); // re-render to update pending highlight
+                };
+                tdLevel.appendChild(sel);
                 tr.appendChild(tdLevel);
-                tr.appendChild(tdAction);
 
                 tbody.appendChild(tr);
-            });
+            }
+
+            updateButtons();
+            updateSortIndicators();
         }
 
-        render();
-    </script>
+        // Apply changes (sequential)
+        async function applyChanges() {
+            const entries = Object.entries(pending);
+            for (const [pkg, lvl] of entries) {
+                const params = new URLSearchParams();
+                params.append("pkg", pkg);
+                params.append("level", String(lvl));
+                // server must NOT redirect; expect 200/204
+                await fetch("/log/level/package/update", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: params
+                });
+            }
+            // clear pending and refresh state from server
+            pending = {};
+            await refresh();
+        }
 
+        // Revert
+        function revertChanges() {
+            pending = {};
+            render();
+        }
+
+        // Refresh everything from server
+        async function refresh() {
+            await loadLevels();
+            await loadPackages();
+            populateLevelFilter();
+            // reset pending and originalMap (originalMap built in loadPackages)
+            pending = {};
+            render();
+        }
+
+        // wire up top buttons (they call the functions defined above)
+        document.getElementById("applyBtn").onclick = applyChanges;
+        document.getElementById("revertBtn").onclick = revertChanges;
+
+        // filters trigger render on input/change
+        document.getElementById("nameFilter").addEventListener("input", () => render());
+        document.getElementById("levelFilter").addEventListener("change", () => render());
+
+        // initial load
+        refresh().catch(err => {
+            console.error("failed to initialize log UI:", err);
+        });
+    </script>
 </body>
+
 </html>
