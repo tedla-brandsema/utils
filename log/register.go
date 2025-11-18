@@ -8,12 +8,12 @@ import (
 )
 
 var (
-	PackageLevels = generics.NewRegistry[string, *slog.LevelVar]()
+	Routes = generics.NewRegistry[string, *slog.LevelVar]()
 )
 
 func SetPackageLevel(pkg string, lvl slog.Level) error {
-	if lvlv, ok := PackageLevels.Get(pkg); ok {
-		lvlv.Set(lvl)
+	if lvlvar, ok := Routes.Get(pkg); ok {
+		lvlvar.Set(lvl)
 		return nil
 	}
 	return fmt.Errorf("unregistered package %q", pkg)
@@ -21,7 +21,7 @@ func SetPackageLevel(pkg string, lvl slog.Level) error {
 
 func Packages() map[string]slog.Level {
 	pkgLvls := make(map[string]slog.Level)
-	for k, v := range PackageLevels.All() {
+	for k, v := range Routes.All() {
 		pkgLvls[k] = v.Level()
 	}
 	return pkgLvls

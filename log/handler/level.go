@@ -32,10 +32,10 @@ func NewPkgLvlHandlerd(h slog.Handler, opts *slog.HandlerOptions) *PkgLvlHandler
 	opts.Level = lvlVar
 
 	pkg := callerPackage(2)
-	if log.PackageLevels == nil {
+	if log.Routes == nil {
 		slog.Error("package level register is nil")
 	}
-	log.PackageLevels.Set(pkg, lvlVar)
+	log.Routes.Set(pkg, lvlVar)
 
 	return &PkgLvlHandler{
 		Pkg:  pkg,

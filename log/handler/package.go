@@ -6,71 +6,56 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+
+	"github.com/tedla-brandsema/utils/log"
 )
 
-type pkgRoute struct {
-	handler slog.Handler
-	level   slog.Level
-}
-
 type PkgAwareHandler struct {
-	fallback slog.Handler
-
-	// global minimum level
-	minLevel slog.Level
-
-	// map of pkg → handler + level
-	mu     sync.RWMutex
-	routes map[string]pkgRoute
+    fallback slog.Handler
+    minLevel slog.Level
 }
 
 func NewPkgAwareHandler(fallback slog.Handler, min slog.Level) *PkgAwareHandler {
-	return &PkgAwareHandler{
-		fallback: fallback,
-		minLevel: min,
-		routes:   make(map[string]pkgRoute),
-	}
+    return &PkgAwareHandler{
+        fallback: fallback,
+        minLevel: min,
+    }
 }
 
 func (h *PkgAwareHandler) Enabled(ctx context.Context, lvl slog.Level) bool {
 	return lvl >= h.minLevel
 }
 
-// Register or update package-level handler
-func (h *PkgAwareHandler) SetPackageHandler(pkg string, handler slog.Handler, level slog.Level) {
-	h.mu.Lock()
-	h.routes[pkg] = pkgRoute{handler: handler, level: level}
-	h.mu.Unlock()
-}
-
 func (h *PkgAwareHandler) Handle(ctx context.Context, r slog.Record) error {
-	// only do the expensive lookup here
-	pc := r.PC
-	if pc == 0 {
-		pcs := make([]uintptr, 1)
-		runtime.Callers(5, pcs)
-		pc = pcs[0]
-	}
+    pc := r.PC
+    if pc == 0 {
+        pcs := make([]uintptr, 1)
+        runtime.Callers(5, pcs)
+        pc = pcs[0]
+    }
 
-	pkg := packageFromPC(pc)
 
-	h.mu.RLock()
-	route, ok := h.routes[pkg]
-	h.mu.RUnlock()
+    pkg := packageFromPC(pc)
+    if lvlv, ok := log.Routes.Get(pkg); ok {
+        // Only emit if record level >= pkg-level
+        if r.Level >= lvlv.Level() {
+            return h.fallback.Handle(ctx, r)
+        }
+        return nil
+    }
 
-	if ok && r.Level >= route.level {
-		return route.handler.Handle(ctx, r)
-	}
+	// Auto-register new package with default level
+	lvlv := &slog.LevelVar{}
+	lvlv.Set(h.minLevel)
+	log.Routes.Set(pkg, lvlv)
 
-	// fallback handler
-	return h.fallback.Handle(ctx, r)
+    return h.fallback.Handle(ctx, r)
 }
 
 func (h *PkgAwareHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	return &PkgAwareHandler{
 		fallback: h.fallback.WithAttrs(attrs),
 		minLevel: h.minLevel,
-		routes:   h.routes, // shared intentionally
 	}
 }
 
@@ -78,7 +63,6 @@ func (h *PkgAwareHandler) WithGroup(name string) slog.Handler {
 	return &PkgAwareHandler{
 		fallback: h.fallback.WithGroup(name),
 		minLevel: h.minLevel,
-		routes:   h.routes,
 	}
 }
 

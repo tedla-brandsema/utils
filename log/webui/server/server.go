@@ -7,23 +7,18 @@ import (
 	"os"
 
 	"github.com/tedla-brandsema/utils/log/handler"
+	"github.com/tedla-brandsema/utils/log/logger"
 	"github.com/tedla-brandsema/utils/log/webui"
 )
 
 const port =":8585"
 
 func main() {
-    opts := slog.HandlerOptions{
-    	Level:     &slog.LevelVar{},
-    }
-    // h := handler.NewDevHandler(os.Stdout, handler.NewDevHandlerOptions())
-    ph := handler.NewPkgLvlHandlerd(slog.NewTextHandler(os.Stdout, &opts), &opts)
+    
+    h := handler.NewDevHandler(os.Stdout, handler.NewDevHandlerOptions())
+    ph := handler.NewPkgAwareHandler(h, logger.LevelTrace )
     lgr := slog.New(ph)
 
-    // Register your own packages:
-    // handler.Register("myapp")
-    // handler.Register("myapp.db")
-    // handler.Register("myapp.http")
     lgr.Info("mounting package level GUI")
     
     mux := http.NewServeMux()
