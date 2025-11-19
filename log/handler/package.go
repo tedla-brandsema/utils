@@ -7,22 +7,33 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/tedla-brandsema/utils/log"
+	"github.com/tedla-brandsema/utils/log/register"
 )
 
 type PkgAwareHandler struct {
-    fallback slog.Handler
-    globalThreshold *slog.LevelVar
+	fallback        slog.Handler
+	globalThreshold *slog.LevelVar
+	skip            int
 }
 
-func NewPkgAwareHandler(fallback slog.Handler, threshold slog.Level) *PkgAwareHandler {
-	lvlv:= &slog.LevelVar{}
-	lvlv.Set(threshold)
-    
-    return &PkgAwareHandler{
-        fallback: fallback,
-        globalThreshold: lvlv,
-    }
+func NewPkgAwareHandler(fallback slog.Handler, threshold *slog.LevelVar) *PkgAwareHandler {
+	lvlv := threshold
+	if lvlv == nil {
+		lvlv = &slog.LevelVar{}
+	}
+
+	return &PkgAwareHandler{
+		fallback:        fallback,
+		globalThreshold: lvlv,
+	}
+}
+
+func (h *PkgAwareHandler) WithSkip(frames int) *PkgAwareHandler {
+	return &PkgAwareHandler{
+		fallback:        h.fallback,
+		globalThreshold: h.globalThreshold,
+		skip:            frames,
+	}
 }
 
 func (h *PkgAwareHandler) SetThreshold(lvl slog.Level) {
@@ -38,35 +49,33 @@ func (h *PkgAwareHandler) Enabled(ctx context.Context, lvl slog.Level) bool {
 }
 
 func (h *PkgAwareHandler) Handle(ctx context.Context, r slog.Record) error {
-    pc := r.PC
-    if pc == 0 {
-        pcs := make([]uintptr, 1)
-        runtime.Callers(5, pcs)
-        pc = pcs[0]
-    }
+	pcs := make([]uintptr, 1)
+	runtime.Callers(4+h.skip, pcs)
+	pc := pcs[0]
+	r.PC = pc
 
-    if lv, ok := pcLevelCache.Load(pc); ok {
+	if lv, ok := pcLevelCache.Load(pc); ok {
 		if r.Level >= lv.(*slog.LevelVar).Level() {
-            return h.fallback.Handle(ctx, r)
-        }
+			return h.fallback.Handle(ctx, r)
+		}
 	}
 
-    lv := resolveLevelVarForPC(pc, h.globalThreshold)
+	lv := resolveLevelVarForPC(pc, h.globalThreshold)
 	pcLevelCache.Store(pc, lv)
 
-    return h.fallback.Handle(ctx, r)
+	return h.fallback.Handle(ctx, r)
 }
 
 func (h *PkgAwareHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	return &PkgAwareHandler{
-		fallback: h.fallback.WithAttrs(attrs),
+		fallback:        h.fallback.WithAttrs(attrs),
 		globalThreshold: h.globalThreshold,
 	}
 }
 
 func (h *PkgAwareHandler) WithGroup(name string) slog.Handler {
 	return &PkgAwareHandler{
-		fallback: h.fallback.WithGroup(name),
+		fallback:        h.fallback.WithGroup(name),
 		globalThreshold: h.globalThreshold,
 	}
 }
@@ -78,14 +87,11 @@ func resolveLevelVarForPC(pc uintptr, global *slog.LevelVar) *slog.LevelVar {
 	pkg := packageFromPC(pc)
 
 	// Already registered in Routes?
-	if lv, ok := log.Routes.Get(pkg); ok {
+	if lv, ok := register.Routes.Get(pkg); ok {
 		return lv
 	}
 
-	// Auto-register
-	lv := &slog.LevelVar{}
-	lv.Set(global.Level())
-	log.Routes.Set(pkg, lv)
+	lv := register.AutoRegisterPackage(pkg, global.Level())
 
 	return lv
 }
@@ -111,23 +117,23 @@ func packageFromPC(pc uintptr) string {
 }
 
 func extractPkg(full string) string {
-    // fast path: no slash → find first dot
-    lastSlash := strings.LastIndexByte(full, '/')
-    if lastSlash == -1 {
-        if dot := strings.IndexByte(full, '.'); dot != -1 {
-            return full[:dot]
-        }
-        return full
-    }
+	// fast path: no slash → find first dot
+	lastSlash := strings.LastIndexByte(full, '/')
+	if lastSlash == -1 {
+		if dot := strings.IndexByte(full, '.'); dot != -1 {
+			return full[:dot]
+		}
+		return full
+	}
 
-    // after final slash, drop function name and method signature
-    remainder := full[lastSlash+1:]
+	// after final slash, drop function name and method signature
+	remainder := full[lastSlash+1:]
 
-    // find first dot AFTER the slash
-    dot := strings.IndexByte(remainder, '.')
-    if dot != -1 {
-        return full[:lastSlash+1+dot]
-    }
+	// find first dot AFTER the slash
+	dot := strings.IndexByte(remainder, '.')
+	if dot != -1 {
+		return full[:lastSlash+1+dot]
+	}
 
-    return full[:lastSlash]
+	return full[:lastSlash]
 }

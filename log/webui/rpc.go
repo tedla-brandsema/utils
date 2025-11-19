@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/tedla-brandsema/utils/log"
-	"github.com/tedla-brandsema/utils/log/logger"
+	"github.com/tedla-brandsema/utils/log/level"
+	"github.com/tedla-brandsema/utils/log/register"
 )
 
 
@@ -21,7 +21,7 @@ func loadLevels() {
 	var err error
 
 	levelMap := make(map[int]string)
-	for k, v := range logger.LogLevels {
+	for k, v := range level.LogLevels {
 		levelMap[int(k)] = v
 	}
 
@@ -48,7 +48,7 @@ type Package struct {
 func packageHandler(w http.ResponseWriter, r *http.Request) {
 	var data []Package
 
-	for pkg, lvl := range log.Packages() {
+	for pkg, lvl := range register.Packages() {
 		data = append(data,
 			Package{
 				Name:  pkg,
@@ -72,14 +72,14 @@ func updatePostHandler(w http.ResponseWriter, r *http.Request) {
 	pkg := r.FormValue("pkg")
 	// cascade := r.FormValue("cascade") == "1"
 
-	level, err := strconv.Atoi(r.FormValue("level"))
+	lvli, err := strconv.Atoi(r.FormValue("level"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	var lvl slog.Level = slog.Level(level)
+	var lvl slog.Level = slog.Level(lvli)
 
-	if _, ok := logger.LogLevels[lvl]; !ok { // check validity of level
+	if _, ok := level.LogLevels[lvl]; !ok { // check validity of level
 		http.Error(w, fmt.Errorf("invalid level index %d", lvl).Error(), http.StatusBadRequest)
 		return
 	}
@@ -87,7 +87,7 @@ func updatePostHandler(w http.ResponseWriter, r *http.Request) {
 	// if cascade {
 	// 	registry.SetCascadeLevel(pkg, lvl)
 	// } else {
-	log.SetPackageLevel(pkg, lvl)
+	register.SetPackageLevel(pkg, lvl)
 	// }
 
 	// http.Redirect(w, r, basePath, http.StatusSeeOther)

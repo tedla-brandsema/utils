@@ -1,4 +1,4 @@
-package logger
+package level
 
 import (
 	"fmt"
@@ -13,41 +13,41 @@ const (
 	// always calc the delta
 	step = slog.LevelWarn - slog.LevelInfo
 
-	LevelTrace = slog.LevelDebug - step
-	LevelDebug = slog.LevelDebug
-	LevelInfo  = slog.LevelInfo
-	LevelWarn  = slog.LevelWarn
-	LevelError = slog.LevelError
-	LevelFatal = slog.LevelError + step
+	Trace = slog.LevelDebug - step
+	Debug = slog.LevelDebug
+	Info  = slog.LevelInfo
+	Warn  = slog.LevelWarn
+	Error = slog.LevelError
+	Fatal = slog.LevelError + step
 )
 
 var LogLevels = map[slog.Level]string{
-	LevelTrace: "TRACE",
-	LevelDebug: slog.LevelDebug.String(),
-	LevelInfo:  slog.LevelInfo.String(),
-	LevelWarn:  slog.LevelWarn.String(),
-	LevelError: slog.LevelError.String(),
-	LevelFatal: "FATAL",
+	Trace: "TRACE",
+	Debug: slog.LevelDebug.String(),
+	Info:  slog.LevelInfo.String(),
+	Warn:  slog.LevelWarn.String(),
+	Error: slog.LevelError.String(),
+	Fatal: "FATAL",
 }
 
 // FIXME: defaultPaddedLevelText, defaultColoredLevelText, padLevelText, calcPadding
 // all rely on defaultLevelText, it should work dynamically based on LogLevels
 var defaultPaddedLevelText = map[slog.Level]string{
-	LevelTrace: padLevelText(LevelTrace),
-	LevelDebug: padLevelText(LevelDebug),
-	LevelInfo:  padLevelText(LevelInfo),
-	LevelWarn:  padLevelText(LevelWarn),
-	LevelError: padLevelText(LevelError),
-	LevelFatal: padLevelText(LevelFatal),
+	Trace: padLevelText(Trace),
+	Debug: padLevelText(Debug),
+	Info:  padLevelText(Info),
+	Warn:  padLevelText(Warn),
+	Error: padLevelText(Error),
+	Fatal: padLevelText(Fatal),
 }
 
 var defaultColoredLevelText = map[slog.Level]string{
-	LevelTrace: color.Blue(defaultPaddedLevelText[LevelTrace]),
-	LevelDebug: color.Green(defaultPaddedLevelText[LevelDebug]),
-	LevelInfo:  color.White(defaultPaddedLevelText[LevelInfo]),
-	LevelWarn:  color.Yellow(defaultPaddedLevelText[LevelWarn]),
-	LevelError: color.Red(defaultPaddedLevelText[LevelError]),
-	LevelFatal: color.Purple(defaultPaddedLevelText[LevelFatal]),
+	Trace: color.Blue(defaultPaddedLevelText[Trace]),
+	Debug: color.Green(defaultPaddedLevelText[Debug]),
+	Info:  color.White(defaultPaddedLevelText[Info]),
+	Warn:  color.Yellow(defaultPaddedLevelText[Warn]),
+	Error: color.Red(defaultPaddedLevelText[Error]),
+	Fatal: color.Purple(defaultPaddedLevelText[Fatal]),
 }
 
 var paddingStr = fmt.Sprintf("%%-%ds", calcPadding())

@@ -6,8 +6,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/tedla-brandsema/utils/log"
 	"github.com/tedla-brandsema/utils/log/handler"
-	"github.com/tedla-brandsema/utils/log/logger"
+	"github.com/tedla-brandsema/utils/log/level"
 )
 
 func devHandlerOpts() (*slog.LevelVar, *handler.DevHandlerOptions) {
@@ -25,39 +26,39 @@ func Test_DevHandler_Standard_Logger(t *testing.T) {
 	lgr := slog.New(devHandler)
 	slog.SetDefault(lgr)
 
-	PrintLevels(lvlvar, slog.Default(), logger.LogLevels, t)
+	PrintLevels(lvlvar, slog.Default(), level.LogLevels, t)
 }
 
 func Test_DevHandler_Custom_Logger(t *testing.T) {
 	lvlvar, opts := devHandlerOpts()
 	devHandler := handler.NewDevHandler(os.Stdout, opts)
 
-	lgr := logger.NewLevelLogger(devHandler)
-	PrintLevels(lvlvar, lgr.Logger, logger.LogLevels, t)
+	lgr := log.NewLogger(devHandler)
+	PrintLevels(lvlvar, lgr.Logger, level.LogLevels, t)
 }
 
 func Test_Set_Additional_Levels_JSONHandler(t *testing.T) {
 	lvlvar := &slog.LevelVar{}
 	lgr := slog.New(slog.NewJSONHandler(os.Stdout,
-		logger.SetAdditionalLogLevels(&slog.HandlerOptions{
+		level.SetAdditionalLogLevels(&slog.HandlerOptions{
 			Level: lvlvar,
 		}),
 	))
 	slog.SetDefault(lgr)
 
-	PrintLevels(lvlvar, slog.Default(), logger.LogLevels, t)
+	PrintLevels(lvlvar, slog.Default(), level.LogLevels, t)
 }
 
 func Test_Set_Additional_Levels_TextHandler(t *testing.T) {
 	lvlvar := &slog.LevelVar{}
 	lgr := slog.New(slog.NewTextHandler(os.Stdout,
-		logger.SetAdditionalLogLevels(&slog.HandlerOptions{
+		level.SetAdditionalLogLevels(&slog.HandlerOptions{
 			Level: lvlvar,
 		}),
 	))
 	slog.SetDefault(lgr)
 
-	PrintLevels(lvlvar, slog.Default(), logger.LogLevels, t)
+	PrintLevels(lvlvar, slog.Default(), level.LogLevels, t)
 }
 
 func PrintLevels(lvlvar *slog.LevelVar, lgr *slog.Logger, logLevels map[slog.Level]string, t *testing.T) {
@@ -68,7 +69,7 @@ func PrintLevels(lvlvar *slog.LevelVar, lgr *slog.Logger, logLevels map[slog.Lev
 
 		lgr.Log(
 			context.Background(),
-			logger.LevelTrace,
+			level.Trace,
 			"Starting function execution",
 			slog.String("function_name", "processData"),
 		)
@@ -90,7 +91,7 @@ func PrintLevels(lvlvar *slog.LevelVar, lgr *slog.Logger, logLevels map[slog.Lev
 		)
 		lgr.Log(
 			context.Background(),
-			logger.LevelFatal,
+			level.Fatal,
 			"Unrecoverable error, shutting down",
 			slog.String("service", "database connection"),
 		)

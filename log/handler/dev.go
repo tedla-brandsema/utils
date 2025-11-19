@@ -12,8 +12,8 @@ import (
 	"text/tabwriter"
 
 	"github.com/tedla-brandsema/utils/generics"
-	"github.com/tedla-brandsema/utils/log/logger"
 	"github.com/tedla-brandsema/utils/log/color"
+	"github.com/tedla-brandsema/utils/log/level"
 )
 
 type colorWriter struct {
@@ -107,15 +107,15 @@ const format = "[15:05:05]"
 
 // Handle formats and prints a log record at the appropriate log level.
 func (h *DevHandler) Handle(_ context.Context, r slog.Record) error {
-	level := logger.LevelString(r.Level)
+	lvl := level.LevelString(r.Level)
 	msg := r.Message
 	if h.opts.Color {
-		level = logger.ColoredLevelString(r.Level)
+		lvl = level.ColoredLevelString(r.Level)
 		msg = color.Cyan(r.Message)
 	}
 	timeStr := r.Time.Format(format)
 
-	h.cw.prefix = fmt.Sprintf("%s %s %s\n", timeStr, level, msg)
+	h.cw.prefix = fmt.Sprintf("%s %s %s\n", timeStr, lvl, msg)
 
 	padding := strings.Repeat(" ", len(format)+7)
 	keyFormat := padding + "%s: "
