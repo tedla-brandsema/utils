@@ -17,7 +17,7 @@ const (
 )
 
 var (
-	lvlMode    = App 
+	lvlMode    = Pkg 
 	global = &slog.LevelVar{}
 
 	modeLock sync.RWMutex
