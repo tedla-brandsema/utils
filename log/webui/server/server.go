@@ -17,7 +17,7 @@ func slogSetup(w io.Writer) {
 	opts := handler.NewDevHandlerOptions()
 	opts.LevelVar().Set(level.Trace)
 	dh := handler.NewDevHandler(w, opts)
-	ph := handler.NewPkgAwareHandler(dh, opts.LevelVar()).WithSkip(0)
+	ph := handler.NewPkgAwareHandler(dh, opts.LevelVar())
 
 	lgr := slog.New(ph)
 	slog.SetDefault(lgr)

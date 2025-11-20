@@ -49,10 +49,13 @@ func (h *PkgAwareHandler) Enabled(ctx context.Context, lvl slog.Level) bool {
 }
 
 func (h *PkgAwareHandler) Handle(ctx context.Context, r slog.Record) error {
-	pcs := make([]uintptr, 1)
-	runtime.Callers(4+h.skip, pcs)
-	pc := pcs[0]
-	r.PC = pc
+	pc := r.PC
+	if pc == 0 || h.skip != 0 {
+		pcs := make([]uintptr, 1)
+		runtime.Callers(4+h.skip, pcs)
+		pc := pcs[0]
+		r.PC = pc
+	}
 
 	if lv, ok := pcLevelCache.Load(pc); ok {
 		if r.Level >= lv.(*slog.LevelVar).Level() {
