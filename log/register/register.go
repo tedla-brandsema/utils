@@ -9,6 +9,48 @@ import (
 
 	"github.com/tedla-brandsema/utils/generics"
 )
+type LevelMode int
+
+const (
+	App LevelMode = iota
+	Pkg
+)
+
+var (
+	lvlMode    = App 
+	global = &slog.LevelVar{}
+
+	modeLock sync.RWMutex
+	lvlLock sync.RWMutex
+)
+
+func Mode() LevelMode {
+	modeLock.RLock()
+	defer modeLock.RUnlock()
+
+	return lvlMode
+}
+
+func SetMode(mode LevelMode) {
+	modeLock.Lock()
+	defer modeLock.Unlock()
+
+	lvlMode = mode
+}
+
+func ApplicationLevel() slog.Level {
+	lvlLock.RLock()
+	defer lvlLock.RUnlock()
+
+	return global.Level()
+}
+
+func SetApplicationLevel(lvl slog.Level) {
+	lvlLock.Lock()
+	defer lvlLock.Unlock()
+
+	global.Set(lvl)
+}
 
 // JSON persistence config
 var (

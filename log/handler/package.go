@@ -11,41 +11,31 @@ import (
 )
 
 type PkgAwareHandler struct {
-	fallback        slog.Handler
-	globalThreshold *slog.LevelVar
-	skip            int
+	skip     int
+	fallback slog.Handler
 }
 
-func NewPkgAwareHandler(fallback slog.Handler, threshold *slog.LevelVar) *PkgAwareHandler {
-	lvlv := threshold
-	if lvlv == nil {
-		lvlv = &slog.LevelVar{}
-	}
-
+func NewPkgAwareHandler(fallback slog.Handler) *PkgAwareHandler {
 	return &PkgAwareHandler{
-		fallback:        fallback,
-		globalThreshold: lvlv,
+		fallback: fallback,
 	}
 }
 
 func (h *PkgAwareHandler) WithSkip(frames int) *PkgAwareHandler {
 	return &PkgAwareHandler{
-		fallback:        h.fallback,
-		globalThreshold: h.globalThreshold,
-		skip:            frames,
+		fallback: h.fallback,
+		skip:     frames,
 	}
 }
 
-func (h *PkgAwareHandler) SetThreshold(lvl slog.Level) {
-	h.globalThreshold.Set(lvl)
-}
-
-func (h *PkgAwareHandler) GetThreshold() slog.Level {
-	return h.globalThreshold.Level()
-}
-
 func (h *PkgAwareHandler) Enabled(ctx context.Context, lvl slog.Level) bool {
-	return lvl >= h.globalThreshold.Level()
+	// mode Pkg always returns ture
+	if register.Mode() == register.Pkg {
+		return true
+	}
+
+	// mode App
+	return lvl >= register.ApplicationLevel() 
 }
 
 func (h *PkgAwareHandler) Handle(ctx context.Context, r slog.Record) error {
@@ -60,7 +50,7 @@ func (h *PkgAwareHandler) Handle(ctx context.Context, r slog.Record) error {
 		}
 	}
 
-	lv := resolveLevelVarForPC(pc, h.globalThreshold)
+	lv := resolveLevelVarForPC(pc, register.ApplicationLevel())
 	pcLevelCache.Store(pc, lv)
 
 	return h.fallback.Handle(ctx, r)
@@ -68,21 +58,19 @@ func (h *PkgAwareHandler) Handle(ctx context.Context, r slog.Record) error {
 
 func (h *PkgAwareHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	return &PkgAwareHandler{
-		fallback:        h.fallback.WithAttrs(attrs),
-		globalThreshold: h.globalThreshold,
+		fallback: h.fallback.WithAttrs(attrs),
 	}
 }
 
 func (h *PkgAwareHandler) WithGroup(name string) slog.Handler {
 	return &PkgAwareHandler{
-		fallback:        h.fallback.WithGroup(name),
-		globalThreshold: h.globalThreshold,
+		fallback: h.fallback.WithGroup(name),
 	}
 }
 
 var pcLevelCache sync.Map // pc uintptr → *slog.LevelVar
 
-func resolveLevelVarForPC(pc uintptr, global *slog.LevelVar) *slog.LevelVar {
+func resolveLevelVarForPC(pc uintptr, global slog.Level) *slog.LevelVar {
 	// Find package (slow)
 	pkg := packageFromPC(pc)
 
@@ -91,7 +79,7 @@ func resolveLevelVarForPC(pc uintptr, global *slog.LevelVar) *slog.LevelVar {
 		return lv
 	}
 
-	lv := register.AutoRegisterPackage(pkg, global.Level())
+	lv := register.AutoRegisterPackage(pkg, global)
 
 	return lv
 }

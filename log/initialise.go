@@ -8,19 +8,17 @@ import (
 
 	"github.com/tedla-brandsema/utils/log/handler"
 	"github.com/tedla-brandsema/utils/log/level"
+	"github.com/tedla-brandsema/utils/log/register"
 )
 
 var (
 	instance *Logger
-	lvl      *slog.LevelVar
 	out      io.Writer
 	base     slog.Handler
+	ph       *handler.PkgAwareHandler
 )
 
-
 func Set(w io.Writer, h slog.Handler) {
-	lvl = &slog.LevelVar{}
-
 	out = w
 	if out == nil {
 		out = os.Stdout
@@ -32,13 +30,16 @@ func Set(w io.Writer, h slog.Handler) {
 	}
 
 	// ph := handler.NewPkgAwareHandler(base, lvl).WithSkip(1)
-	ph := handler.NewPkgAwareHandler(base, lvl).WithSkip(1)
+	ph = handler.NewPkgAwareHandler(base).WithSkip(1)
 	instance = NewLogger(ph)
 }
 
+func Mode(mode register.LevelMode) {
+	register.SetMode(mode)
+}
 
-func GlobalThreshold(l slog.Level) {
-	lvl.Set(l)
+func ApplicationLevel(l slog.Level) {
+	register.SetApplicationLevel(l)
 }
 
 func Log(ctx context.Context, level slog.Level, msg string, args ...any) {
