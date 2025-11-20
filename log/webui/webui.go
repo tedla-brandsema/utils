@@ -1,6 +1,7 @@
 package webui
 
 import (
+	"context"
 	"embed"
 	"fmt"
 	"html/template"
@@ -89,18 +90,30 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func Start(port string) {
-	if port == "" {
-		port = defaultPort	
-	}
+func Start(port string) (func(ctx context.Context) error, error) {
+    if port == "" {
+        port = defaultPort
+    }
 
-	slog.Info("mounting package level GUI")
+    slog.Info("mounting package level GUI")
 
-	mux := http.NewServeMux()
-	Mount(mux)
+    mux := http.NewServeMux()
+    Mount(mux)
 
-	slog.Info(fmt.Sprintf("serving on port %s", port))
-	if err := http.ListenAndServe(port, mux); err != nil {
-		panic(err)
-	}
+    srv := &http.Server{
+        Addr:    port,
+        Handler: mux,
+    }
+
+    // Start the server in a goroutine
+    go func() {
+        slog.Info(fmt.Sprintf("serving on port %s", port))
+        if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+            slog.Error("web ui error", "err", err)
+        }
+    }()
+
+    // Return the shutdown function
+    return srv.Shutdown, nil
 }
+
