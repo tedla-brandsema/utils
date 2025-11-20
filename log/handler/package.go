@@ -35,7 +35,7 @@ func (h *PkgAwareHandler) Enabled(ctx context.Context, lvl slog.Level) bool {
 	}
 
 	// mode App
-	return lvl >= register.ApplicationLevel() 
+	return lvl >= register.ApplicationLevel()
 }
 
 func (h *PkgAwareHandler) Handle(ctx context.Context, r slog.Record) error {
@@ -53,7 +53,10 @@ func (h *PkgAwareHandler) Handle(ctx context.Context, r slog.Record) error {
 	lv := resolveLevelVarForPC(pc, register.ApplicationLevel())
 	pcLevelCache.Store(pc, lv)
 
-	return h.fallback.Handle(ctx, r)
+	if r.Level >= lv.Level() {
+		return h.fallback.Handle(ctx, r)
+	}
+	return nil
 }
 
 func (h *PkgAwareHandler) WithAttrs(attrs []slog.Attr) slog.Handler {

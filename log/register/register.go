@@ -9,6 +9,7 @@ import (
 
 	"github.com/tedla-brandsema/utils/generics"
 )
+
 type LevelMode int
 
 const (
@@ -17,11 +18,11 @@ const (
 )
 
 var (
-	lvlMode    = Pkg 
-	global = &slog.LevelVar{}
+	lvlMode = Pkg
+	global  = &slog.LevelVar{}
 
 	modeLock sync.RWMutex
-	lvlLock sync.RWMutex
+	lvlLock  sync.RWMutex
 )
 
 func Mode() LevelMode {
