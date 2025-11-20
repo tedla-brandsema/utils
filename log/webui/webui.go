@@ -2,14 +2,18 @@ package webui
 
 import (
 	"embed"
+	"fmt"
 	"html/template"
 	"io/fs"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"syscall"
 )
 
 const (
+
+	defaultPort = ":8585"
 	basePath = "/log/level"
 )
 
@@ -82,5 +86,21 @@ func Mount(mux *http.ServeMux) {
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	if err := indexTmpl.Execute(w, nil); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func Start(port string) {
+	if port == "" {
+		port = defaultPort	
+	}
+
+	slog.Info("mounting package level GUI")
+
+	mux := http.NewServeMux()
+	Mount(mux)
+
+	slog.Info(fmt.Sprintf("serving on port %s", port))
+	if err := http.ListenAndServe(port, mux); err != nil {
+		panic(err)
 	}
 }

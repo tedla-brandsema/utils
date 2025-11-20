@@ -1,34 +1,28 @@
 package main
 
 import (
-	"fmt"
-	"net/http"
+	"io"
+	"log/slog"
 	"os"
 
-	"github.com/tedla-brandsema/utils/log"
 	"github.com/tedla-brandsema/utils/log/handler"
+	"github.com/tedla-brandsema/utils/log/level"
 	"github.com/tedla-brandsema/utils/log/webui"
 )
 
-const port = ":8585"
+
+
+func slogSetup(w io.Writer) {
+	opts := handler.NewDevHandlerOptions()
+	opts.LevelVar().Set(level.Trace)
+	dh := handler.NewDevHandler(w, opts)
+	ph := handler.NewPkgAwareHandler(dh, opts.LevelVar()).WithSkip(1)
+
+	lgr := slog.New(ph)
+	slog.SetDefault(lgr)
+}
 
 func main() {
-	opts := handler.NewDevHandlerOptions()
-	opts.AddSource = true
-	h := handler.NewDevHandler(os.Stdout, opts)
-
-	// ph := handler.NewPkgAwareHandler(h, &slog.LevelVar{})
-	// lgr := log.NewLogger(ph)
-	// lgr := slog.New(ph)
-
-	log.Set(os.Stdout, h)
-	log.Info("mounting package level GUI")
-
-	mux := http.NewServeMux()
-	webui.Mount(mux)
-
-	log.Info(fmt.Sprintf("serving on port %s", port))
-	if err := http.ListenAndServe(port, mux); err != nil {
-		panic(err)
-	}
+	slogSetup(os.Stdout)
+	webui.Start(":8585") 
 }
