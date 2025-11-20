@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"runtime"
 	"strings"
@@ -50,13 +49,10 @@ func (h *PkgAwareHandler) Enabled(ctx context.Context, lvl slog.Level) bool {
 }
 
 func (h *PkgAwareHandler) Handle(ctx context.Context, r slog.Record) error {
-	pc := r.PC
-	if pc == 0 {
-		pcs := make([]uintptr, 1)
-		runtime.Callers(4+h.skip, pcs)
-		pc = pcs[0]
-	}
-	fmt.Printf("PC: %d\n",  pc)
+	pcs := make([]uintptr, 1)
+	runtime.Callers(4+h.skip, pcs)
+	pc := pcs[0]
+	r.PC = pc
 
 	if lv, ok := pcLevelCache.Load(pc); ok {
 		if r.Level >= lv.(*slog.LevelVar).Level() {
@@ -89,7 +85,6 @@ var pcLevelCache sync.Map // pc uintptr → *slog.LevelVar
 func resolveLevelVarForPC(pc uintptr, global *slog.LevelVar) *slog.LevelVar {
 	// Find package (slow)
 	pkg := packageFromPC(pc)
-	fmt.Printf("resolveLevelVarForPC: %s\n",  pkg)
 
 	// Already registered in Routes?
 	if lv, ok := register.Routes.Get(pkg); ok {
@@ -115,7 +110,6 @@ func packageFromPC(pc uintptr) string {
 	}
 
 	name := fn.Name()
-	fmt.Printf("FULL PKG: %s\n", name)
 	pkg := extractPkg(name)
 
 	pcCache.Store(pc, pkg)
